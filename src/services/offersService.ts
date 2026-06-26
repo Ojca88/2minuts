@@ -136,7 +136,7 @@ export async function fetchOffersByCategory(category: string): Promise<Offer[]> 
     try {
       const response = await fetch(feedConfig.url, {
         next: { revalidate: 900 },
-        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; DailyBrief/1.0)' },
+        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; 2Minuts/1.0)' },
       });
 
       if (!response.ok) continue;

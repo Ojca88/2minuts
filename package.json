@@ -1,6 +1,6 @@
 {
-  "name": "dailybrief",
-  "version": "0.1.0",
+"name": "2minuts",  
+"version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",

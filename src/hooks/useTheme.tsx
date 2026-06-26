@@ -19,7 +19,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    const stored = localStorage.getItem('dailybrief-theme') as Theme | null;
+    const stored = localStorage.getItem('2minuts-theme') as Theme | null;
     if (stored) {
       setThemeState(stored);
     }
@@ -43,7 +43,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   const setTheme = (newTheme: Theme) => {
     setThemeState(newTheme);
-    localStorage.setItem('dailybrief-theme', newTheme);
+    localStorage.setItem('2minuts-theme', newTheme);
   };
 
   return (

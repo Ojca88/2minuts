@@ -112,7 +112,7 @@ export async function fetchNewsByCategory(categoryId: string): Promise<News[]> {
   try {
     const response = await fetch(feedConfig.url, {
       next: { revalidate: 900 }, // Cache 15 min
-      headers: { 'User-Agent': 'DailyBrief/1.0' },
+      headers: { 'User-Agent': '2Minuts/1.0' },
     });
 
     if (!response.ok) return [];

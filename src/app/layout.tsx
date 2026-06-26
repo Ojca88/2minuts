@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "DailyBrief - Briefing Ejecutivo Diario",
+  title: "2Minuts - Briefing Ejecutivo Diario",
   description: "Tu resumen ejecutivo diario con las noticias más relevantes",
   manifest: "/manifest.json",
 };

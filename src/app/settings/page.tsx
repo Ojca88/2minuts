@@ -5,7 +5,7 @@ import Header from '@/components/Header';
 import { Settings } from '@/types';
 import { useTheme } from '@/hooks/useTheme';
 
-const STORAGE_KEY = 'dailybrief-settings';
+const STORAGE_KEY = '2minuts-settings';
 
 function loadSettings(): Settings {
   if (typeof window === 'undefined') {
