@@ -7,7 +7,6 @@ import { mockSaint } from '@/data/mockSaint';
 import { useUpdate } from '@/hooks/useUpdate';
 
 import Header from '@/components/Header';
-import SummaryCard from '@/components/SummaryCard';
 import NewsCard from '@/components/NewsCard';
 import UpdateButton from '@/components/UpdateButton';
 
@@ -26,11 +25,6 @@ export default function NoticiasPage() {
             showSuccess={showSuccess}
             onUpdate={update}
           />
-        </section>
-
-        {/* Executive Summary */}
-        <section className="mb-6">
-          <SummaryCard summary={mockReport.executiveSummary} />
         </section>
 
         {/* Categories with news preview */}
