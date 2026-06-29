@@ -20,6 +20,7 @@ export default function Home() {
   const [showSuccess, setShowSuccess] = useState(false);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
 
+
   useEffect(() => {
     try {
       const favs: string[] = JSON.parse(localStorage.getItem('2minuts-favorites') || '[]');
@@ -136,6 +137,7 @@ export default function Home() {
           </div>
         </section>
 
+{/* Quick Access */}
         {/* Quick Access */}
         <div className="grid grid-cols-2 gap-3">
           <Link
