@@ -12,7 +12,7 @@ export function useUpdate() {
 
   const fetchNews = useCallback(async () => {
     try {
-      const response = await fetch('/api/news');
+      const response = await fetch('/api/news?t=' + Date.now(), { cache: 'no-store' });
       if (response.ok) {
         const data: News[] = await response.json();
         setCurrentNews(data);
@@ -39,12 +39,21 @@ export function useUpdate() {
     setIsUpdating(true);
     setShowSuccess(false);
 
-    await fetchNews();
-
-    setIsUpdating(false);
-    setShowSuccess(true);
-
-    setTimeout(() => setShowSuccess(false), 3000);
+    try {
+      await fetchNews();
+    } finally {
+      setIsUpdating(false);
+      setShowSuccess(true);
+      const now = new Date();
+      setLastUpdate(now.toLocaleString('es-ES', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      }));
+      setTimeout(() => setShowSuccess(false), 3000);
+    }
   }, [fetchNews]);
 
   return { isUpdating, isLoading, lastUpdate, showSuccess, currentNews, update };

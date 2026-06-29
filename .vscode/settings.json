@@ -3,6 +3,14 @@
         "/^git add -A && git status$/": {
             "approve": true,
             "matchCommandLine": true
+        },
+        "/^git commit -m \"Renombrar proyecto a 2Minuts y actualizar README\"$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^git push origin main$/": {
+            "approve": true,
+            "matchCommandLine": true
         }
     }
 }

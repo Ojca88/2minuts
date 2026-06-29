@@ -7,19 +7,32 @@ import { useTheme } from '@/hooks/useTheme';
 
 const STORAGE_KEY = '2minuts-settings';
 
-function loadSettings(): Settings {
+const INTEREST_TOPICS = [
+  'Inteligencia Artificial', 'Apple', 'Google', 'Microsoft', 'Tesla',
+  'F1', 'NBA', 'Champions League', 'LaLiga', 'Criptomonedas',
+  'Startups', 'Ciencia', 'Salud', 'Medio Ambiente', 'Cine',
+];
+
+interface ExtendedSettings extends Settings {
+  interests: string[];
+}
+
+function loadSettings(): ExtendedSettings {
   if (typeof window === 'undefined') {
-    return { language: 'es', updateFrequency: '8h', email: '', theme: 'light' };
+    return { language: 'es', updateFrequency: '8h', email: '', theme: 'light', offersPerCategory: 6, interests: [] };
   }
   const stored = localStorage.getItem(STORAGE_KEY);
   if (stored) {
-    try { return JSON.parse(stored); } catch { /* fallback */ }
+    try {
+      const parsed = JSON.parse(stored);
+      return { interests: [], ...parsed };
+    } catch { /* fallback */ }
   }
-  return { language: 'es', updateFrequency: '8h', email: '', theme: 'light' };
+  return { language: 'es', updateFrequency: '8h', email: '', theme: 'light', offersPerCategory: 6, interests: [] };
 }
 
 export default function SettingsPage() {
-  const [settings, setSettings] = useState<Settings>(loadSettings);
+  const [settings, setSettings] = useState<ExtendedSettings>(loadSettings);
   const [saved, setSaved] = useState(false);
   const [mounted, setMounted] = useState(false);
   const { theme, setTheme } = useTheme();
@@ -29,7 +42,7 @@ export default function SettingsPage() {
     setSettings(loadSettings());
   }, []);
 
-  const handleChange = (field: keyof Settings, value: string) => {
+  const handleChange = (field: keyof ExtendedSettings, value: string | number | string[]) => {
     setSettings((prev) => ({ ...prev, [field]: value }));
     setSaved(false);
   };
@@ -37,6 +50,14 @@ export default function SettingsPage() {
   const handleThemeChange = (newTheme: 'light' | 'dark') => {
     handleChange('theme', newTheme);
     setTheme(newTheme);
+  };
+
+  const toggleInterest = (topic: string) => {
+    const current = settings.interests || [];
+    const updated = current.includes(topic)
+      ? current.filter((t) => t !== topic)
+      : [...current, topic];
+    handleChange('interests', updated);
   };
 
   const handleSave = () => {
@@ -52,16 +73,16 @@ export default function SettingsPage() {
       <Header />
       <main className="flex-1 max-w-4xl mx-auto w-full px-4 pt-4 pb-24">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-lg font-bold text-gray-900">Ajustes</h1>
+          <h1 className="text-lg font-bold text-gray-900 dark:text-gray-100">Ajustes</h1>
           <span className="text-xs text-gray-400">v1.0.0</span>
         </div>
 
         {/* Perfil */}
         <section className="mb-6">
-          <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Perfil</h2>
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 divide-y divide-gray-50">
+          <h2 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Perfil</h2>
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 divide-y divide-gray-50 dark:divide-gray-700">
             <div className="p-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
                 ✉️ Correo electrónico
               </label>
               <input
@@ -69,18 +90,18 @@ export default function SettingsPage() {
                 value={settings.email}
                 onChange={(e) => handleChange('email', e.target.value)}
                 placeholder="tu@email.com"
-                className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                className="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2.5 text-sm text-gray-700 dark:text-gray-200 bg-gray-50 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
               />
               <p className="text-[11px] text-gray-400 mt-1.5">Para recibir el briefing diario por correo</p>
             </div>
             <div className="p-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
                 🌐 Idioma
               </label>
               <select
                 value={settings.language}
                 onChange={(e) => handleChange('language', e.target.value)}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                className="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2.5 text-sm text-gray-700 dark:text-gray-200 bg-gray-50 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
               >
                 <option value="es">🇪🇸 Español</option>
                 <option value="en">🇬🇧 English</option>
@@ -95,9 +116,9 @@ export default function SettingsPage() {
         {/* Notificaciones */}
         <section className="mb-6">
           <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Notificaciones</h2>
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 divide-y divide-gray-50">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 divide-y divide-gray-50 dark:divide-gray-700">
             <div className="p-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
                 ⏱️ Frecuencia de actualización
               </label>
               <div className="grid grid-cols-4 gap-2">
@@ -122,14 +143,28 @@ export default function SettingsPage() {
               </div>
               <p className="text-[11px] text-gray-400 mt-2">Con qué frecuencia se actualizan las noticias</p>
             </div>
+            <div className="p-4">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
+                🛍️ Ofertas por categoría
+              </label>
+              <input
+                type="number"
+                min="1"
+                max="20"
+                value={settings.offersPerCategory}
+                onChange={(e) => handleChange('offersPerCategory', e.target.value)}
+                className="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2.5 text-sm text-gray-700 dark:text-gray-200 bg-gray-50 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+              />
+              <p className="text-[11px] text-gray-400 mt-1.5">Número de ofertas que se muestran en cada categoría (1-20)</p>
+            </div>
           </div>
         </section>
 
         {/* Apariencia */}
         <section className="mb-6">
-          <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Apariencia</h2>
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
-            <label className="block text-sm font-medium text-gray-700 mb-3">
+          <h2 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Apariencia</h2>
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-4">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-3">
               🎨 Tema de la aplicación
             </label>
             <div className="grid grid-cols-3 gap-2">
@@ -170,10 +205,39 @@ export default function SettingsPage() {
           </div>
         </section>
 
+        {/* Intereses */}
+        <section className="mb-6">
+          <h2 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Personalización</h2>
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-4">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-3">
+              🎯 Temas de interés
+            </label>
+            <p className="text-[11px] text-gray-400 mb-3">Selecciona tus temas favoritos para personalizar el orden del briefing</p>
+            <div className="flex flex-wrap gap-2">
+              {INTEREST_TOPICS.map((topic) => {
+                const isSelected = (settings.interests || []).includes(topic);
+                return (
+                  <button
+                    key={topic}
+                    onClick={() => toggleInterest(topic)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                      isSelected
+                        ? 'bg-blue-600 text-white shadow-sm'
+                        : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                    }`}
+                  >
+                    {topic}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
         {/* Fuentes */}
         <section className="mb-6">
-          <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Fuentes de noticias</h2>
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+          <h2 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Fuentes de noticias</h2>
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-4">
             <div className="space-y-3">
               {[
                 { name: 'El País', category: 'Actualidad / Internacional', active: true },
@@ -184,7 +248,7 @@ export default function SettingsPage() {
               ].map((source) => (
                 <div key={source.name} className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-800">{source.name}</p>
+                    <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{source.name}</p>
                     <p className="text-[11px] text-gray-400">{source.category}</p>
                   </div>
                   <div className={`w-9 h-5 rounded-full relative transition-colors ${source.active ? 'bg-blue-600' : 'bg-gray-300'}`}>
@@ -199,20 +263,20 @@ export default function SettingsPage() {
 
         {/* Acerca de */}
         <section className="mb-6">
-          <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Acerca de</h2>
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+          <h2 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Acerca de</h2>
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-4">
             <div className="space-y-2">
               <div className="flex justify-between">
-                <span className="text-sm text-gray-600">Versión</span>
-                <span className="text-sm text-gray-900 font-medium">1.0.0</span>
+                <span className="text-sm text-gray-600 dark:text-gray-400">Versión</span>
+                <span className="text-sm text-gray-900 dark:text-gray-100 font-medium">1.0.0</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm text-gray-600">Plataforma</span>
-                <span className="text-sm text-gray-900 font-medium">Next.js 16</span>
+                <span className="text-sm text-gray-600 dark:text-gray-400">Plataforma</span>
+                <span className="text-sm text-gray-900 dark:text-gray-100 font-medium">Next.js 16</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm text-gray-600">Datos</span>
-                <span className="text-sm text-gray-900 font-medium">RSS en tiempo real</span>
+                <span className="text-sm text-gray-600 dark:text-gray-400">Datos</span>
+                <span className="text-sm text-gray-900 dark:text-gray-100 font-medium">RSS en tiempo real</span>
               </div>
             </div>
           </div>

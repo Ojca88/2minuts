@@ -1,4 +1,6 @@
 import { XMLParser } from 'fast-xml-parser';
+import { secureFetch } from '@/security/ssrf';
+import { sanitizeRssContent, sanitizeUrl } from '@/security/sanitizers';
 
 export interface Offer {
   id: string;
@@ -8,6 +10,7 @@ export interface Offer {
   url: string;
   category: string;
   date: string;
+  image?: string;
 }
 
 interface OfferFeedConfig {
@@ -16,16 +19,29 @@ interface OfferFeedConfig {
   source: string;
 }
 
-// Working Spanish tech RSS feeds that regularly contain deals/offers
+// All feeds - some are shared across categories and filtered by brand keywords
 const OFFER_FEEDS: OfferFeedConfig[] = [
+  // Tecnología
   { url: 'https://hardzone.es/feed/', category: 'tecnologia', source: 'HardZone' },
+  { url: 'https://www.adslzone.net/feed/', category: 'tecnologia', source: 'ADSLZone' },
+  // Móviles
   { url: 'https://www.adslzone.net/feed/', category: 'moviles', source: 'ADSLZone' },
+  { url: 'https://feeds.weblogssl.com/xatakamovil', category: 'moviles', source: 'Xataka Móvil' },
+  // Gaming
   { url: 'https://www.muycomputer.com/feed/', category: 'gaming', source: 'MuyComputer' },
+  // Hogar
   { url: 'https://www.profesionalreview.com/feed/', category: 'hogar', source: 'ProfesionalReview' },
-  { url: 'https://www.muycomputer.com/feed/', category: 'hogar', source: 'MuyComputer' },
+  // Nike - deal aggregators with brand search
+  { url: 'https://www.chollometro.com/rss/grupo/nike', category: 'ropa_nike', source: 'Chollometro' },
+  { url: 'https://www.chollometro.com/rss/search?q=nike', category: 'ropa_nike', source: 'Chollometro' },
+  { url: 'https://www.adslzone.net/feed/', category: 'ropa_nike', source: 'ADSLZone' },
+  // Adidas - deal aggregators with brand search
+  { url: 'https://www.chollometro.com/rss/grupo/adidas', category: 'ropa_adidas', source: 'Chollometro' },
+  { url: 'https://www.chollometro.com/rss/search?q=adidas', category: 'ropa_adidas', source: 'Chollometro' },
+  { url: 'https://www.adslzone.net/feed/', category: 'ropa_adidas', source: 'ADSLZone' },
 ];
 
-// Keywords that indicate an offer/deal
+// General offer keywords
 const OFFER_KEYWORDS = [
   'oferta', 'descuento', 'rebaja', 'barato', 'precio', 'chollo',
   'prime day', 'black friday', 'ahorra', 'ganga', 'promoción',
@@ -33,6 +49,10 @@ const OFFER_KEYWORDS = [
   'menos de', 'por solo', 'tirado de precio', 'mínimo histórico',
   'amazon', 'mediamarkt', 'pccomponentes', 'aliexpress', 'miravia',
 ];
+
+// Brand keywords for filtering
+const NIKE_KEYWORDS = ['nike', 'air max', 'air force', 'jordan', 'dunk', 'pegasus', 'running', 'zapatilla', 'sneaker', 'deportiva'];
+const ADIDAS_KEYWORDS = ['adidas', 'ultraboost', 'samba', 'gazelle', 'superstar', 'yeezy', 'running', 'zapatilla', 'sneaker', 'deportiva'];
 
 const parser = new XMLParser({
   ignoreAttributes: false,
@@ -62,13 +82,21 @@ function parseOfferItem(
   const link = (item.link as string) || (item.guid as string) || '';
   const pubDate = (item.pubDate as string) || '';
 
-  const cleanTitle = (typeof title === 'string' ? title : '').replace(/<[^>]*>/g, '').trim();
+  const cleanTitle = sanitizeRssContent((typeof title === 'string' ? title : '').replace(/<[^>]*>/g, '').trim());
   if (!cleanTitle || !link) return null;
 
-  // Only include items that match offer keywords
   const lowerTitle = cleanTitle.toLowerCase();
-  const isOffer = OFFER_KEYWORDS.some((kw) => lowerTitle.includes(kw));
-  if (!isOffer) return null;
+
+  // For brand categories, filter by brand keywords (no need for general offer keywords)
+  if (category === 'ropa_nike') {
+    if (!NIKE_KEYWORDS.some((kw) => lowerTitle.includes(kw))) return null;
+  } else if (category === 'ropa_adidas') {
+    if (!ADIDAS_KEYWORDS.some((kw) => lowerTitle.includes(kw))) return null;
+  } else {
+    // For other categories, require general offer keywords
+    const isOffer = OFFER_KEYWORDS.some((kw) => lowerTitle.includes(kw));
+    if (!isOffer) return null;
+  }
 
   // Extract price from title
   const pricePatterns = [
@@ -104,7 +132,7 @@ function parseOfferItem(
     title: cleanTitle,
     price,
     store,
-    url: typeof link === 'string' ? link : '',
+    url: sanitizeUrl(typeof link === 'string' ? link : ''),
     category,
     date,
   };
@@ -134,8 +162,8 @@ export async function fetchOffersByCategory(category: string): Promise<Offer[]> 
 
   for (const feedConfig of feedConfigs) {
     try {
-      const response = await fetch(feedConfig.url, {
-        next: { revalidate: 900 },
+      const response = await secureFetch(feedConfig.url, {
+        cache: 'no-store',
         headers: { 'User-Agent': 'Mozilla/5.0 (compatible; 2Minuts/1.0)' },
       });
 
@@ -145,7 +173,10 @@ export async function fetchOffersByCategory(category: string): Promise<Offer[]> 
       const parsed = parser.parse(xml);
       const items = extractItems(parsed);
 
-      for (let i = 0; i < items.length; i++) {
+      // For brand categories, scan more items since brand filter is restrictive
+      const maxScan = (category === 'ropa_nike' || category === 'ropa_adidas') ? items.length : Math.min(items.length, 30);
+
+      for (let i = 0; i < maxScan; i++) {
         const item = items[i] as Record<string, unknown>;
         const offer = parseOfferItem(item, category, feedConfig.source, i);
         if (offer) {
@@ -160,11 +191,39 @@ export async function fetchOffersByCategory(category: string): Promise<Offer[]> 
     if (allOffers.length >= 6) break;
   }
 
+  // Fallback: if brand categories have no results, show curated links
+  if (allOffers.length === 0 && category === 'ropa_nike') {
+    return getNikeFallbackOffers();
+  }
+  if (allOffers.length === 0 && category === 'ropa_adidas') {
+    return getAdidasFallbackOffers();
+  }
+
   return allOffers;
 }
 
+function getNikeFallbackOffers(): Offer[] {
+  const today = new Date().toLocaleDateString('es-ES');
+  return [
+    { id: 'nike-sale-1', title: 'Nike Sale - Hasta 50% en zapatillas seleccionadas', price: 'Hasta -50%', store: 'Nike', url: 'https://www.nike.com/es/w/rebajas-3yaep', category: 'ropa_nike', date: today },
+    { id: 'nike-sale-2', title: 'Nike Air Max - Colección con descuentos', price: 'Desde 89€', store: 'Nike', url: 'https://www.nike.com/es/w/air-max-a6d8h', category: 'ropa_nike', date: today },
+    { id: 'nike-sale-3', title: 'Nike Running - Ofertas en Pegasus y Vomero', price: 'Desde 79€', store: 'Nike', url: 'https://www.nike.com/es/w/running-zapatillas-37v7jz6eovh', category: 'ropa_nike', date: today },
+    { id: 'nike-sale-4', title: 'Nike Dunk & Jordan - Sneakers en oferta', price: 'Desde 69€', store: 'Nike', url: 'https://www.nike.com/es/w/jordan-37eef', category: 'ropa_nike', date: today },
+  ];
+}
+
+function getAdidasFallbackOffers(): Offer[] {
+  const today = new Date().toLocaleDateString('es-ES');
+  return [
+    { id: 'adidas-sale-1', title: 'Adidas Outlet - Hasta 50% de descuento', price: 'Hasta -50%', store: 'Adidas', url: 'https://www.adidas.es/outlet', category: 'ropa_adidas', date: today },
+    { id: 'adidas-sale-2', title: 'Adidas Samba y Gazelle - Clásicos en oferta', price: 'Desde 69€', store: 'Adidas', url: 'https://www.adidas.es/samba', category: 'ropa_adidas', date: today },
+    { id: 'adidas-sale-3', title: 'Adidas Ultraboost - Running con descuento', price: 'Desde 99€', store: 'Adidas', url: 'https://www.adidas.es/ultraboost', category: 'ropa_adidas', date: today },
+    { id: 'adidas-sale-4', title: 'Adidas Originals - Superstar y más', price: 'Desde 59€', store: 'Adidas', url: 'https://www.adidas.es/originals', category: 'ropa_adidas', date: today },
+  ];
+}
+
 export async function fetchAllOffers(): Promise<Record<string, Offer[]>> {
-  const categories = ['tecnologia', 'moviles', 'gaming', 'hogar'];
+  const categories = ['tecnologia', 'moviles', 'gaming', 'hogar', 'ropa_nike', 'ropa_adidas'];
 
   const results = await Promise.allSettled(
     categories.map((cat) => fetchOffersByCategory(cat))
@@ -194,14 +253,24 @@ export async function fetchAllOffers(): Promise<Record<string, Offer[]>> {
   }
 
   // Superofertas: pick the best offers from all categories (those with strongest deal keywords)
-  const strongKeywords = ['prime day', 'descuento', 'rebaja', 'mínimo histórico', 'chollo', 'oferta bomba', 'euros menos'];
+  // These offers are REMOVED from their original category to avoid repetition
+  const strongKeywords = ['prime day', 'descuento', 'rebaja', 'mínimo histórico', 'chollo', 'oferta bomba', 'euros menos', 'gratis', 'cupón'];
+  const superOfferIds = new Set<string>();
   const superOffers = allOffers
     .filter((o) => {
       const lower = o.title.toLowerCase();
       return strongKeywords.some((kw) => lower.includes(kw));
     })
     .slice(0, 5)
-    .map((o) => ({ ...o, id: `superofertas-${o.id}`, category: 'superofertas' }));
+    .map((o) => {
+      superOfferIds.add(o.id);
+      return { ...o, id: `superofertas-${o.id}`, category: 'superofertas' };
+    });
+
+  // Remove superofertas items from their original categories
+  for (const cat of categories) {
+    offersByCategory[cat] = offersByCategory[cat].filter((o) => !superOfferIds.has(o.id));
+  }
   
   offersByCategory['superofertas'] = superOffers;
 

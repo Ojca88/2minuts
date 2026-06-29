@@ -7,6 +7,7 @@ export const mockReport: Report = {
   executiveSummary:
     'Los mercados internacionales reaccionan positivamente a las últimas decisiones de los bancos centrales sobre tipos de interés. La inteligencia artificial sigue protagonizando los principales anuncios tecnológicos con nuevos modelos multimodales. En el plano político, la Comisión Europea aprueba nuevas regulaciones sobre soberanía digital. El Real Madrid presenta su estrategia para la próxima temporada con fichajes clave. En España, el debate sobre la reforma fiscal centra la agenda parlamentaria mientras se preparan las negociaciones presupuestarias.',
   categories: [
+    { id: 'ia', name: 'Inteligencia Artificial', icon: '🤖', newsCount: 3 },
     { id: 'actualidad', name: 'Actualidad', icon: '📰', newsCount: 3 },
     { id: 'internacional', name: 'Actualidad Internacional', icon: '🌍', newsCount: 3 },
     { id: 'politica', name: 'Política', icon: '🏛️', newsCount: 3 },

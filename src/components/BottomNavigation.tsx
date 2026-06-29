@@ -7,7 +7,7 @@ const navItems = [
   { href: '/', label: 'Inicio', icon: '🏠' },
   { href: '/noticias', label: 'Noticias', icon: '📰' },
   { href: '/ofertas', label: 'Ofertas', icon: '🛍️' },
-  { href: '/categories', label: 'Categorías', icon: '📂' },
+  { href: '/favoritos', label: 'Favoritos', icon: '⭐' },
   { href: '/settings', label: 'Ajustes', icon: '⚙️' },
 ];
 
@@ -15,7 +15,7 @@ export default function BottomNavigation() {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 safe-area-bottom">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 safe-area-bottom">
       <div className="max-w-4xl mx-auto flex justify-around items-center h-16">
         {navItems.map((item) => {
           const isActive = pathname === item.href;

@@ -1,5 +1,7 @@
 import { XMLParser } from 'fast-xml-parser';
 import { News } from '@/types';
+import { secureFetch } from '@/security/ssrf';
+import { sanitizeRssContent, sanitizeUrl } from '@/security/sanitizers';
 
 interface RssFeedConfig {
   url: string;
@@ -8,6 +10,9 @@ interface RssFeedConfig {
 }
 
 const RSS_FEEDS: RssFeedConfig[] = [
+  // Inteligencia Artificial
+  { url: 'https://feeds.weblogssl.com/xataka2', categoryId: 'ia', source: 'Xataka' },
+  { url: 'https://www.technologyreview.es/feed', categoryId: 'ia', source: 'MIT Technology Review' },
   // Actualidad (solo España)
   { url: 'https://feeds.elpais.com/mrss-s/pages/ep/site/elpais.com/section/espana/portada', categoryId: 'actualidad', source: 'El País' },
   // Internacional
@@ -86,12 +91,13 @@ function parseItem(
   const pubDate = (item.pubDate as string) || (item.published as string) || (item['dc:date'] as string) || '';
 
   // Clean HTML tags from description and decode entities
-  const cleanSummary = decodeEntities(rawDesc.replace(/<[^>]*>/g, '').trim()).slice(0, 300);
-  const cleanTitle = decodeEntities(rawTitle.replace(/<[^>]*>/g, '').trim());
+  const cleanSummary = sanitizeRssContent(decodeEntities(rawDesc.replace(/<[^>]*>/g, '').trim())).slice(0, 300);
+  const cleanTitle = sanitizeRssContent(decodeEntities(rawTitle.replace(/<[^>]*>/g, '').trim()));
 
   if (!cleanTitle || !link) return null;
 
   const date = pubDate ? new Date(pubDate).toLocaleDateString('es-ES') : new Date().toLocaleDateString('es-ES');
+  const safeUrl = sanitizeUrl(typeof link === 'string' ? link : '');
 
   return {
     id: `${categoryId}-${index}`,
@@ -99,39 +105,58 @@ function parseItem(
     source,
     date,
     summary: cleanSummary || 'Leer noticia completa en la fuente original.',
-    url: typeof link === 'string' ? link : '',
+    url: safeUrl,
     categoryId,
     verified: true,
   };
 }
 
+// Keywords that indicate AI-related news
+const AI_KEYWORDS = [
+  'inteligencia artificial', 'ia ', ' ia', 'chatgpt', 'openai', 'gemini', 'claude',
+  'machine learning', 'deep learning', 'llm', 'gpt', 'copilot', 'modelo de lenguaje',
+  'neural', 'ai ', ' ai', 'artificial intelligence', 'generativa', 'generative',
+  'anthropic', 'midjourney', 'stable diffusion', 'robot', 'automatización',
+];
+
 export async function fetchNewsByCategory(categoryId: string): Promise<News[]> {
-  const feedConfig = RSS_FEEDS.find((f) => f.categoryId === categoryId);
-  if (!feedConfig) return [];
+  const feedConfigs = RSS_FEEDS.filter((f) => f.categoryId === categoryId);
+  if (feedConfigs.length === 0) return [];
 
-  try {
-    const response = await fetch(feedConfig.url, {
-      next: { revalidate: 900 }, // Cache 15 min
-      headers: { 'User-Agent': '2Minuts/1.0' },
-    });
+  const allNews: News[] = [];
 
-    if (!response.ok) return [];
+  for (const feedConfig of feedConfigs) {
+    try {
+      const response = await secureFetch(feedConfig.url, {
+        cache: 'no-store',
+        headers: { 'User-Agent': '2Minuts/1.0' },
+      });
 
-    const xml = await response.text();
-    const parsed = parser.parse(xml);
-    const items = extractItems(parsed);
+      if (!response.ok) continue;
 
-    const news: News[] = [];
-    for (let i = 0; i < Math.min(items.length, 8); i++) {
-      const item = items[i] as Record<string, unknown>;
-      const parsedItem = parseItem(item, categoryId, feedConfig.source, i);
-      if (parsedItem) news.push(parsedItem);
+      const xml = await response.text();
+      const parsed = parser.parse(xml);
+      const items = extractItems(parsed);
+
+      for (let i = 0; i < Math.min(items.length, 15); i++) {
+        const item = items[i] as Record<string, unknown>;
+        const parsedItem = parseItem(item, categoryId, feedConfig.source, i);
+        if (parsedItem) {
+          // For IA category, filter only AI-related news
+          if (categoryId === 'ia') {
+            const lower = parsedItem.title.toLowerCase() + ' ' + parsedItem.summary.toLowerCase();
+            const isAI = AI_KEYWORDS.some((kw) => lower.includes(kw));
+            if (!isAI) continue;
+          }
+          allNews.push(parsedItem);
+        }
+      }
+    } catch {
+      continue;
     }
-    // Deduplicate within category and return top 3
-    return deduplicateNews(news).slice(0, 3);
-  } catch {
-    return [];
   }
+
+  return deduplicateNews(allNews).slice(0, 5);
 }
 
 // Extrae palabras clave significativas de un título (>4 chars, lowercase)
@@ -164,7 +189,7 @@ function deduplicateNews(news: News[]): News[] {
 }
 
 export async function fetchAllNews(): Promise<News[]> {
-  const categories = ['actualidad', 'internacional', 'politica', 'deporte', 'realmadrid', 'tecnologia', 'gadgets'];
+  const categories = ['ia', 'actualidad', 'internacional', 'politica', 'deporte', 'realmadrid', 'tecnologia', 'gadgets'];
 
   const results = await Promise.allSettled(
     categories.map((cat) => fetchNewsByCategory(cat))

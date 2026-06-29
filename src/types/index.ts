@@ -46,4 +46,5 @@ export interface Settings {
   updateFrequency: string;
   email: string;
   theme: 'light' | 'dark';
+  offersPerCategory: number;
 }
