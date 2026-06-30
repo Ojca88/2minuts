@@ -2,6 +2,10 @@
 
 import { createContext, useContext, useEffect, useState } from 'react';
 
+/**
+ * Sistema de temas (light/dark/system).
+ * Persiste la preferencia en localStorage y aplica la clase 'dark' al <html>.
+ */
 type Theme = 'light' | 'dark' | 'system';
 
 interface ThemeContextType {

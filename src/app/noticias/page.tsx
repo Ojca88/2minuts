@@ -3,12 +3,6 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useUpdate } from '@/hooks/useUpdate';
-import { Efemeride, Saint } from '@/types';
-
-interface SaintDay {
-  label: string;
-  saint: Saint;
-}
 
 import Header from '@/components/Header';
 import UpdateButton from '@/components/UpdateButton';
@@ -27,9 +21,7 @@ const CATEGORIES = [
 export default function NoticiasPage() {
   const { isUpdating, isLoading, lastUpdate, showSuccess, currentNews, update } = useUpdate();
   const [newsPerCategory, setNewsPerCategory] = useState(3);
-  const [efemerides, setEfemerides] = useState<Efemeride[]>([]);
-  const [saints, setSaints] = useState<SaintDay[]>([]);
-  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(['ia', 'actualidad']));
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(CATEGORIES.map(c => c.id)));
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
 
   const toggleFavorite = (e: React.MouseEvent, id: string) => {
@@ -57,14 +49,6 @@ export default function NoticiasPage() {
       const favs: string[] = JSON.parse(localStorage.getItem('2minuts-favorites') || '[]');
       setFavorites(new Set(favs));
     } catch { /* ignore */ }
-    fetch('/api/efemerides?t=' + Date.now(), { cache: 'no-store' })
-      .then((r) => r.ok ? r.json() : [])
-      .then(setEfemerides)
-      .catch(() => {});
-    fetch('/api/saint?t=' + Date.now(), { cache: 'no-store' })
-      .then((r) => r.ok ? r.json() : [])
-      .then(setSaints)
-      .catch(() => {});
   }, []);
 
   const toggleCategory = (id: string) => {
@@ -82,6 +66,14 @@ export default function NoticiasPage() {
         {/* Update Button */}
         <section className="mb-5">
           <UpdateButton isUpdating={isUpdating} showSuccess={showSuccess} onUpdate={update} />
+          {lastUpdate && (
+            <div className="flex items-center justify-center gap-1.5 mt-2">
+              <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+              <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                Noticias al día — última consulta: {lastUpdate}
+              </p>
+            </div>
+          )}
         </section>
 
         {/* Categories with collapsible news */}
@@ -140,41 +132,6 @@ export default function NoticiasPage() {
               })}
             </div>
           )}
-        </section>
-
-        {/* Efemérides */}
-        <section className="mb-6">
-          <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-3">📅 Efemérides del {new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })}</h2>
-          <div className="grid gap-2">
-            {efemerides.length > 0 ? efemerides.slice(0, newsPerCategory).map((efem) => (
-              <div key={efem.id} className="bg-white dark:bg-gray-800 rounded-xl p-3.5 shadow-sm border border-gray-100 dark:border-gray-700">
-                <div className="flex items-baseline gap-2 mb-1">
-                  <span className="text-[10px] font-bold text-blue-600 bg-blue-50 dark:bg-blue-900 px-1.5 py-0.5 rounded">{efem.year}</span>
-                  <h3 className="text-xs font-semibold text-gray-900 dark:text-gray-100">{efem.event}</h3>
-                </div>
-                <p className="text-[11px] text-gray-600 dark:text-gray-400 leading-relaxed mt-1">{efem.description}</p>
-              </div>
-            )) : (
-              <p className="text-xs text-gray-400 animate-pulse">Cargando efemérides...</p>
-            )}
-          </div>
-        </section>
-
-        {/* Santoral */}
-        <section className="mb-6">
-          <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-3">✝️ Santoral</h2>
-          <div className="grid gap-2">
-            {saints.length > 0 ? saints.map((day, i) => (
-              <div key={i} className="bg-white dark:bg-gray-800 rounded-xl p-3.5 shadow-sm border border-gray-100 dark:border-gray-700">
-                <p className="text-[10px] font-semibold text-blue-600 uppercase tracking-wider mb-1">{day.label}</p>
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">{day.saint.name}</h3>
-                <p className="text-[11px] text-gray-600 dark:text-gray-400 leading-relaxed">{day.saint.biography}</p>
-                {day.saint.relevance && <p className="text-[11px] text-gray-500 dark:text-gray-400 italic mt-1">{day.saint.relevance}</p>}
-              </div>
-            )) : (
-              <p className="text-xs text-gray-400 animate-pulse">Cargando santoral...</p>
-            )}
-          </div>
         </section>
       </main>
     </>

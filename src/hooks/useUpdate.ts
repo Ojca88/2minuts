@@ -3,6 +3,11 @@
 import { useState, useCallback, useEffect } from 'react';
 import { News } from '@/types';
 
+/**
+ * Hook para gestionar la carga y actualización de noticias.
+ * - Carga inicial automática al montar el componente
+ * - refresh=true invalida la caché del servidor para obtener datos frescos
+ */
 export function useUpdate() {
   const [isUpdating, setIsUpdating] = useState(false);
   const [lastUpdate, setLastUpdate] = useState<string>('');
@@ -10,9 +15,10 @@ export function useUpdate() {
   const [currentNews, setCurrentNews] = useState<News[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const fetchNews = useCallback(async () => {
+  const fetchNews = useCallback(async (refresh = false) => {
     try {
-      const response = await fetch('/api/news?t=' + Date.now(), { cache: 'no-store' });
+      const params = refresh ? `?refresh=true&t=${Date.now()}` : `?t=${Date.now()}`;
+      const response = await fetch('/api/news' + params, { cache: 'no-store' });
       if (response.ok) {
         const data: News[] = await response.json();
         setCurrentNews(data);
@@ -40,7 +46,7 @@ export function useUpdate() {
     setShowSuccess(false);
 
     try {
-      await fetchNews();
+      await fetchNews(true);
     } finally {
       setIsUpdating(false);
       setShowSuccess(true);

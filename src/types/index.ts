@@ -1,3 +1,4 @@
+/** Noticia obtenida de feeds RSS */
 export interface News {
   id: string;
   title: string;
@@ -9,6 +10,7 @@ export interface News {
   verified: boolean;
 }
 
+/** Categoría temática de noticias */
 export interface Category {
   id: string;
   name: string;
@@ -16,6 +18,7 @@ export interface Category {
   newsCount: number;
 }
 
+/** Efeméride histórica del día (fuente: Wikipedia) */
 export interface Efemeride {
   id: string;
   year: number;
@@ -24,23 +27,14 @@ export interface Efemeride {
   source: string;
 }
 
+/** Santo del día (fuente: Wikipedia) */
 export interface Saint {
   name: string;
   biography: string;
   relevance: string;
 }
 
-export interface Report {
-  id: string;
-  date: string;
-  lastUpdate: string;
-  executiveSummary: string;
-  categories: Category[];
-  news: News[];
-  efemerides: Efemeride[];
-  saint: Saint;
-}
-
+/** Preferencias del usuario almacenadas en localStorage */
 export interface Settings {
   language: string;
   updateFrequency: string;

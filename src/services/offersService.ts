@@ -1,3 +1,7 @@
+/**
+ * Servicio de Ofertas - Obtiene ofertas y chollos de feeds RSS especializados.
+ * Filtra por palabras clave de oferta y marcas (Nike, Adidas, etc.).
+ */
 import { XMLParser } from 'fast-xml-parser';
 import { secureFetch } from '@/security/ssrf';
 import { sanitizeRssContent, sanitizeUrl } from '@/security/sanitizers';

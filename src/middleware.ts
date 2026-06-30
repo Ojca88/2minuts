@@ -1,3 +1,7 @@
+/**
+ * Middleware de seguridad - Aplica headers de seguridad (CSP, HSTS, etc.)
+ * a todas las respuestas de la aplicación.
+ */
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 

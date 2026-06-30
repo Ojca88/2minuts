@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { fetchAllOffers } from '@/services/offersService';
 import { checkRateLimit, getClientId, rateLimitHeaders, RATE_LIMITS } from '@/security/rateLimit';
-import { withCache } from '@/security/cache';
+import { withCache, invalidateCache } from '@/security/cache';
 import { logger } from '@/security/logging';
 
 export const dynamic = 'force-dynamic';
@@ -19,6 +19,12 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    // Invalidate cache if refresh requested
+    const refresh = request.nextUrl.searchParams.get('refresh');
+    if (refresh === 'true') {
+      invalidateCache('offers:all');
+    }
+
     // Cache offers for 5 minutes
     const offers = await withCache('offers:all', fetchAllOffers, 5 * 60 * 1000);
     

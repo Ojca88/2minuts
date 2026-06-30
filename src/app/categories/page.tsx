@@ -1,13 +1,24 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { mockReport } from '@/data/mockReport';
 import Header from '@/components/Header';
 import CategoryCard from '@/components/CategoryCard';
 import NewsCard from '@/components/NewsCard';
 import { useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
-import { News } from '@/types';
+import { News, Category } from '@/types';
+
+// Categorías disponibles en la app
+const CATEGORIES: Category[] = [
+  { id: 'ia', name: 'Inteligencia Artificial', icon: '🤖', newsCount: 0 },
+  { id: 'actualidad', name: 'Actualidad', icon: '📰', newsCount: 0 },
+  { id: 'internacional', name: 'Internacional', icon: '🌍', newsCount: 0 },
+  { id: 'politica', name: 'Política', icon: '🏛️', newsCount: 0 },
+  { id: 'deporte', name: 'Deporte', icon: '⚽', newsCount: 0 },
+  { id: 'realmadrid', name: 'Real Madrid', icon: '⚪', newsCount: 0 },
+  { id: 'tecnologia', name: 'Tecnología', icon: '💻', newsCount: 0 },
+  { id: 'gadgets', name: 'Gadgets', icon: '📱', newsCount: 0 },
+];
 
 function CategoriesContent() {
   const searchParams = useSearchParams();
@@ -29,7 +40,7 @@ function CategoriesContent() {
       .finally(() => setLoading(false));
   }, [activeCategory]);
 
-  const activeCategoryData = mockReport.categories.find((c) => c.id === activeCategory);
+  const activeCategoryData = CATEGORIES.find((c) => c.id === activeCategory);
 
   return (
     <>
@@ -39,7 +50,7 @@ function CategoriesContent() {
 
         {!activeCategory ? (
           <div className="grid gap-2">
-            {mockReport.categories.map((category) => (
+            {CATEGORIES.map((category) => (
               <div key={category.id} onClick={() => setActiveCategory(category.id)}>
                 <CategoryCard category={category} />
               </div>

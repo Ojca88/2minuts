@@ -1,3 +1,7 @@
+/**
+ * Servicio RSS - Obtiene noticias en tiempo real de múltiples feeds.
+ * Cada feed se asigna a una categoría y se deduplica por similitud de títulos.
+ */
 import { XMLParser } from 'fast-xml-parser';
 import { News } from '@/types';
 import { secureFetch } from '@/security/ssrf';
@@ -13,20 +17,38 @@ const RSS_FEEDS: RssFeedConfig[] = [
   // Inteligencia Artificial
   { url: 'https://feeds.weblogssl.com/xataka2', categoryId: 'ia', source: 'Xataka' },
   { url: 'https://www.technologyreview.es/feed', categoryId: 'ia', source: 'MIT Technology Review' },
-  // Actualidad (solo España)
+  { url: 'https://www.muycomputer.com/feed/', categoryId: 'ia', source: 'MuyComputer' },
+  { url: 'https://wwwhatsnew.com/feed/', categoryId: 'ia', source: 'WWWhatsnew' },
+  { url: 'https://hipertextual.com/feed', categoryId: 'ia', source: 'Hipertextual' },
+  { url: 'https://www.adslzone.net/feed/', categoryId: 'ia', source: 'ADSLZone' },
+  // Actualidad (España)
   { url: 'https://feeds.elpais.com/mrss-s/pages/ep/site/elpais.com/section/espana/portada', categoryId: 'actualidad', source: 'El País' },
+  { url: 'https://e00-elmundo.uecdn.es/elmundo/rss/portada.xml', categoryId: 'actualidad', source: 'El Mundo' },
+  { url: 'https://rss.elconfidencial.com/espana/', categoryId: 'actualidad', source: 'El Confidencial' },
   // Internacional
   { url: 'https://feeds.elpais.com/mrss-s/pages/ep/site/elpais.com/section/internacional/portada', categoryId: 'internacional', source: 'El País' },
+  { url: 'https://e00-elmundo.uecdn.es/elmundo/rss/internacional.xml', categoryId: 'internacional', source: 'El Mundo' },
+  { url: 'https://rss.elconfidencial.com/mundo/', categoryId: 'internacional', source: 'El Confidencial' },
   // Política
   { url: 'https://e00-elmundo.uecdn.es/elmundo/rss/espana.xml', categoryId: 'politica', source: 'El Mundo' },
+  { url: 'https://rss.elconfidencial.com/espana/', categoryId: 'politica', source: 'El Confidencial' },
   // Deporte General
   { url: 'https://e00-marca.uecdn.es/rss/portada.xml', categoryId: 'deporte', source: 'Marca' },
+  { url: 'https://as.com/rss/diario.xml', categoryId: 'deporte', source: 'AS' },
   // Real Madrid
   { url: 'https://e00-marca.uecdn.es/rss/futbol/real-madrid.xml', categoryId: 'realmadrid', source: 'Marca' },
+  { url: 'https://as.com/rss/futbol/realmadrid.xml', categoryId: 'realmadrid', source: 'AS' },
   // Tecnología
   { url: 'https://feeds.weblogssl.com/xataka2', categoryId: 'tecnologia', source: 'Xataka' },
+  { url: 'https://www.muycomputer.com/feed/', categoryId: 'tecnologia', source: 'MuyComputer' },
+  { url: 'https://www.adslzone.net/feed/', categoryId: 'tecnologia', source: 'ADSLZone' },
+  { url: 'https://hipertextual.com/feed', categoryId: 'tecnologia', source: 'Hipertextual' },
+  { url: 'https://hardzone.es/feed/', categoryId: 'tecnologia', source: 'HardZone' },
   // Gadgets
   { url: 'https://feeds.weblogssl.com/xatakamovil', categoryId: 'gadgets', source: 'Xataka Móvil' },
+  { url: 'https://www.profesionalreview.com/feed/', categoryId: 'gadgets', source: 'ProfesionalReview' },
+  { url: 'https://wwwhatsnew.com/feed/', categoryId: 'gadgets', source: 'WWWhatsnew' },
+  { url: 'https://www.adslzone.net/feed/', categoryId: 'gadgets', source: 'ADSLZone' },
 ];
 
 const parser = new XMLParser({
@@ -111,12 +133,14 @@ function parseItem(
   };
 }
 
-// Keywords that indicate AI-related news
+// Keywords that indicate AI-related news (se buscan en título + resumen en minúsculas)
 const AI_KEYWORDS = [
   'inteligencia artificial', 'ia ', ' ia', 'chatgpt', 'openai', 'gemini', 'claude',
   'machine learning', 'deep learning', 'llm', 'gpt', 'copilot', 'modelo de lenguaje',
   'neural', 'ai ', ' ai', 'artificial intelligence', 'generativa', 'generative',
   'anthropic', 'midjourney', 'stable diffusion', 'robot', 'automatización',
+  'sora', 'dall-e', 'hugging face', 'transformers', 'agente', 'prompt',
+  'microsoft copilot', 'meta ai', 'apple intelligence', 'nvidia',
 ];
 
 export async function fetchNewsByCategory(categoryId: string): Promise<News[]> {
@@ -156,7 +180,17 @@ export async function fetchNewsByCategory(categoryId: string): Promise<News[]> {
     }
   }
 
-  return deduplicateNews(allNews).slice(0, 5);
+  return shuffle(deduplicateNews(allNews)).slice(0, 10);
+}
+
+/** Mezcla aleatoriamente un array (Fisher-Yates) */
+function shuffle<T>(arr: T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
 }
 
 // Extrae palabras clave significativas de un título (>4 chars, lowercase)
@@ -201,5 +235,5 @@ export async function fetchAllNews(): Promise<News[]> {
       allNews.push(...result.value);
     }
   }
-  return deduplicateNews(allNews);
+  return shuffle(deduplicateNews(allNews));
 }

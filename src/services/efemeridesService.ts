@@ -2,16 +2,16 @@ import { Efemeride } from '@/types';
 import { secureFetch } from '@/security/ssrf';
 import { sanitizeText } from '@/security/sanitizers';
 
-export interface IEfemeridesService {
-  getToday(): Promise<Efemeride[]>;
-}
-
 interface WikiEvent {
   text: string;
   year?: number;
   pages?: { title?: string }[];
 }
 
+/**
+ * Obtiene las efemérides del día actual desde la API de Wikipedia.
+ * Devuelve hasta 5 eventos históricos relevantes.
+ */
 export async function fetchTodayEfemerides(): Promise<Efemeride[]> {
   const now = new Date();
   const month = String(now.getMonth() + 1).padStart(2, '0');
@@ -28,7 +28,6 @@ export async function fetchTodayEfemerides(): Promise<Efemeride[]> {
     const data = await response.json();
     const events: WikiEvent[] = data.events || [];
 
-    // Pick up to 5 interesting events
     return events.slice(0, 5).map((event, i) => ({
       id: `efem-${i}`,
       year: event.year || 0,
@@ -40,9 +39,3 @@ export async function fetchTodayEfemerides(): Promise<Efemeride[]> {
     return [];
   }
 }
-
-export const efemeridesService: IEfemeridesService = {
-  async getToday() {
-    return fetchTodayEfemerides();
-  },
-};

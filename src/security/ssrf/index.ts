@@ -15,6 +15,10 @@ const ALLOWED_DOMAINS = new Set([
   'www.profesionalreview.com',
   'www.technologyreview.es',
   'www.chollometro.com',
+  'wwwhatsnew.com',
+  'hipertextual.com',
+  'rss.elconfidencial.com',
+  'as.com',
   // Brand stores (for offer links)
   'www.nike.com',
   'www.adidas.es',

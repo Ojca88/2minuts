@@ -2,13 +2,10 @@ import { Saint } from '@/types';
 import { secureFetch } from '@/security/ssrf';
 import { sanitizeText } from '@/security/sanitizers';
 
+/** Datos del santo del día con su etiqueta ("Hoy" / "Mañana") */
 export interface SaintDay {
   label: string;
   saint: Saint;
-}
-
-export interface ISaintService {
-  getToday(): Promise<Saint>;
 }
 
 const MONTHS_ES = [
@@ -16,6 +13,10 @@ const MONTHS_ES = [
   'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
 ];
 
+/**
+ * Obtiene el santoral de una fecha desde Wikipedia.
+ * Parsea la sección "Santoral" de la página del día.
+ */
 async function fetchSaintForDate(date: Date): Promise<Saint> {
   const day = date.getDate();
   const month = MONTHS_ES[date.getMonth()];
@@ -102,9 +103,3 @@ function fallbackSaint(): Saint {
     relevance: '',
   };
 }
-
-export const saintService: ISaintService = {
-  async getToday() {
-    return fetchTodaySaint();
-  },
-};
